@@ -1,0 +1,60 @@
+# Maintainer: Christian Meurin (NebuHiiEjamu)
+_realname=godot
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgver=3.0.6
+pkgrel=1
+arch=('any')
+pkgdesc="An advanced, feature packed, multi-platform 2D and 3D game engine (mingw-w64)"
+license=('MIT')
+makedepends=("${MINGW_PACKAGE_PREFIX}-yasm" "scons")
+depends=("${MINGW_PACKAGE_PREFIX}-freetype"
+				"${MINGW_PACKAGE_PREFIX}-bullet"
+				"${MINGW_PACKAGE_PREFIX}-enet"
+				"${MINGW_PACKAGE_PREFIX}-libwebp"
+				"${MINGW_PACKAGE_PREFIX}-libvpx"
+				"${MINGW_PACKAGE_PREFIX}-libpng"
+				"${MINGW_PACKAGE_PREFIX}-libsquish"
+				"${MINGW_PACKAGE_PREFIX}-libtheora"
+				"${MINGW_PACKAGE_PREFIX}-libwebsockets"
+				"${MINGW_PACKAGE_PREFIX}-mbedtls"
+				"${MINGW_PACKAGE_PREFIX}-miniupnpc"
+				"${MINGW_PACKAGE_PREFIX}-opus"
+				"${MINGW_PACKAGE_PREFIX}-pcre2"
+				"${MINGW_PACKAGE_PREFIX}-zstd")
+source=("https://github.com/godotengine/${_realname}/archive/${pkgver}-stable.tar.gz")
+source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/${_basename}-${pkgver}.tar.xz")
+sha256sums=('d70e08568a16cb294fae094383afdd4565f2fc39d8020fb347d35807c4453fe1')
+
+prepare() {
+  mkdir -p build-${CARCH}
+}
+
+build() {
+  local -a extra_config
+  cd build-${CARCH}${_variant}
+  if [ "${_variant}" = "-static" ]; then
+    extra_config+=( -DBUILD_SHARED_LIBS=NO )
+    QT5_PREFIX=${MINGW_PREFIX}/qt5-static
+    export PATH=${QT5_PREFIX}/bin:"$PATH"
+  else
+    QT5_PREFIX=${MINGW_PREFIX}
+  fi
+
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=;-DECM_MKSPECS_INSTALL_DIR=" \
+    cmake ../${_basename}-${pkgver} \
+      -DCMAKE_BUILD_TYPE=$(_kde_f5_CMAKE_BUILD_TYPE) \
+      -DCMAKE_INSTALL_PREFIX=${QT5_PREFIX} \
+      -DKDE_INSTALL_LIBDIR=lib \
+      -DECM_MKSPECS_INSTALL_DIR=${QT5_PREFIX}/share/qt5/mkspecs/modules \
+      -DBUILD_QCH=OFF \
+      -DBUILD_TESTING=OFF \
+      -DECM_DIR=${MINGW_PREFIX}/share/ECM \
+      "${extra_config[@]}" \
+      -G'MSYS Makefiles'
+  make
+}
+
+package() {
+  cd build-${CARCH}${_variant}
+  make DESTDIR="${pkgdir}" install
+}
