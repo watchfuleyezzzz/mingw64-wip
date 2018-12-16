@@ -1,0 +1,82 @@
+# Maintainer: Christian Meurin (NebuHiiEjamu)
+_realname=fpc
+pkgname=("${MINGW_PACKAGE_PREFIX}-cross-${_realname}")
+pkgver=3.0.4
+pkgrel=1
+arch=('any') # 32-bit fails with uninformative error
+pkgdesc="Free Pascal Compiler, Turbo Pascal 7.0 and Delphi compatible. (mingw-w64, bootstrap)"
+license=('custom' 'GPL' 'LGPL')
+makedepends=("${MINGW_PACKAGE_PREFIX}-binutils")
+conflicts=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+provides=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+source=("https://sourceforge.net/projects/freepascal/files/Source/$pkgver/fpcbuild-$pkgver.tar.gz"
+				"https://sourceforge.net/projects/freepascal/files/Win32/$pkgver/${_realname}-$pkgver.i386-win32.exe"
+				"http://constexpr.org/innoextract/files/innoextract-1.7-windows.zip"
+				"${_realname}.cfg")
+sha256sums=('f66514e6f2c2e4e1bccccb4d554c24b77682ed61c87811ae5dd210f421855e76'
+            '1f6323d3362eca1f0b2f63160c2329205df0415f6aa9d8e42910629aaaa823bb'
+            '9a0ede947448132c9a8fa390ae92da8fb25a5dffc666306f777e611b60b82fbd'
+            'd422be9e3251f4d337e4ef37a0b0b5b4b15336346ee0ad10d90e907022562866')
+_origpath=$PATH
+
+prepare() {
+  ./innoextract ${_realname}-$pkgver.i386-win32.exe
+  sed -i "s,FPCVER,$pkgver,g" $srcdir/${_realname}.cfg
+}
+
+build() {
+	PATH="${srcdir}/app/bin/i386-win32:${_origpath}"
+  cd "fpcbuild-$pkgver"
+  pushd fpcsrc/compiler
+  fpcmake -Tall
+  popd
+  
+  [ $CARCH == "i686" ] && mingw32-make NOGDB=1 all OS_TARGET=win32 CPU_TARGET=i386 BINUTILSPREFIX="i686-w64-mingw32-"
+  [ $CARCH == "x86_64" ] && mingw32-make NOGDB=1 all OS_TARGET=win64 CPU_TARGET=x86_64 BINUTILSPREFIX="x86_64-w64-mingw32-"
+}
+
+package() {
+  PATH="${srcdir}/app/bin/i386-win32:${_origpath}"
+  cd "fpcbuild-$pkgver"
+  
+  #_exes="fpc mkarmins ppudump ppufiles ppumove"
+  
+  if [ $CARCH == "i686" ]; then
+		mingw32-make -j1 NOGDB=1 PREFIX="${pkgdir}${MINGW_PREFIX}" crossinstall OS_TARGET=win32 CPU_TARGET=i386
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/i386-win32/mka64ins.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/i386-win32/ppc386.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#for file in ${_exes}; do
+		#	mv ${pkgdir}${MINGW_PREFIX}/bin/i386-win32/${file}.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#done
+		#rm -r ${pkgdir}${MINGW_PREFIX}/bin/i386-win32
+	fi
+  if [ $CARCH == "x86_64" ]; then
+		mingw32-make -j1 NOGDB=1 PREFIX="${pkgdir}${MINGW_PREFIX}" crossinstall OS_TARGET=win64 CPU_TARGET=x86_64
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64/mkx86ins.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64/ppcx64.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#for file in ${_exes}; do
+		#	mv ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64/${file}.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#done
+		#rm -r ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64
+	fi
+	
+	PATH=${_origpath} # use system tools henceforth
+	
+# 	mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver
+# 	mkdir -p ${pkgdir}${MINGW_PREFIX}/share/${_realname}-$pkgver
+# 	cp -r ${pkgdir}${MINGW_PREFIX}/doc ${pkgdir}${MINGW_PREFIX}/share/
+# 	rm -r ${pkgdir}${MINGW_PREFIX}/doc
+# 	cp -r ${pkgdir}${MINGW_PREFIX}/docs/symbolic ${pkgdir}${MINGW_PREFIX}/share/doc/${_realname}/symbolic
+# 	rm -r ${pkgdir}${MINGW_PREFIX}/docs
+# 	cp -r ${pkgdir}${MINGW_PREFIX}/examples ${pkgdir}${MINGW_PREFIX}/share/${_realname}-$pkgver/examples
+# 	rm -r ${pkgdir}${MINGW_PREFIX}/examples
+# 	cp -r ${pkgdir}${MINGW_PREFIX}/fpmkinst ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver/fpmkinst
+# 	rm -r ${pkgdir}${MINGW_PREFIX}/fpmkinst
+# 	cp -r ${pkgdir}${MINGW_PREFIX}/msg ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver/msg
+# 	rm -r ${pkgdir}${MINGW_PREFIX}/msg
+# 	cp -r ${pkgdir}${MINGW_PREFIX}/units ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver/units
+# 	rm -r ${pkgdir}${MINGW_PREFIX}/units
+	
+	install -Dm644 $srcdir/fpc.cfg ${pkgdir}${MINGW_PREFIX}/etc/fpc.cfg
+	install -Dm0644 fpcsrc/rtl/COPYING.FPC "${pkgdir}${MINGW_PREFIX}"/share/licenses/${_realname}/COPYING.FPC
+}

@@ -1,0 +1,43 @@
+# Maintainer: Christian Meurin (NebuHiiEjamu)
+_realname=recastnavigation
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgver=1.5.1
+pkgrel=1
+arch=('any')
+pkgdesc="Navigation-mesh Toolset for Games (mingw-w64)"
+license=('zlib')
+makedepends=("${MINGW_PACKAGE_PREFIX}-premake")
+depends=("${MINGW_PACKAGE_PREFIX}-SDL2")
+source=("https://github.com/${_realname}/${_realname}/archive/${pkgver}.tar.gz")
+sha256sums=('fdd0d9ac656993cb34d02d3c6c41e3a3311c1da79b84bbedca71c5d629f915fc'
+            '851fd4918f812d8d079d5212fd533bf2d576ff5c009ae9002ef83ba20693eccd')
+
+prepare() {
+  cp -r ${_realname}-${pkgver}/* build-${CARCH}-shared/
+  cp -r ${_realname}-${pkgver}/* build-${CARCH}-static/
+  
+  cd build-${CARCH}-shared/RecastDemo
+  sed -i "s,StaticLib,SharedLib,g" premake5.lua
+  premake5
+}
+
+build() {
+  cd build-${CARCH}-shared/RecastDemo
+  
+  cd build-${CARCH}-static
+
+	cmake ../${_realname}-${pkgver} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX} \
+		-DRECASTNAVIGATION_DEMO=OFF \
+		-DRECASTNAVIGATION_EXAMPLES=OFF \
+		-DRECASTNAVIGATION_TESTS=OFF \
+		-DRECASTNAVIGATION_STATIC=ON \
+		-G'MSYS Makefiles'
+  make
+}
+
+package() {
+  cd build-${CARCH}-shared
+  make DESTDIR="${pkgdir}" install
+}

@@ -1,0 +1,72 @@
+# Maintainer: Christian Meurin (NebuHiiEjamu)
+_realname=fpc
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgver=3.0.4
+pkgrel=1
+arch=('any')
+pkgdesc="Free Pascal Compiler, Turbo Pascal 7.0 and Delphi compatible. (mingw-w64)"
+license=('custom' 'GPL' 'LGPL')
+makedepends=("${MINGW_PACKAGE_PREFIX}-fpc")
+conflicts=("${MINGW_PACKAGE_PREFIX}-${_realname}-bootstrap")
+provides=("${MINGW_PACKAGE_PREFIX}-${_realname}-bootstrap")
+replaces=("${MINGW_PACKAGE_PREFIX}-${_realname}-bootstrap")
+source=("https://sourceforge.net/projects/freepascal/files/Source/$pkgver/fpcbuild-$pkgver.tar.gz"
+				"${_realname}.cfg")
+sha256sums=('f66514e6f2c2e4e1bccccb4d554c24b77682ed61c87811ae5dd210f421855e76'
+            'd422be9e3251f4d337e4ef37a0b0b5b4b15336346ee0ad10d90e907022562866')
+
+prepare() {
+  sed -i "s,FPCVER,$pkgver,g" $srcdir/${_realname}.cfg
+  cd "fpcbuild-$pkgver/fpcsrc"
+  fpc fpmake.pp
+}
+
+build() {
+  cd "fpcbuild-$pkgver"
+  
+  [ $CARCH == "i686" ] && make NOGDB=1 all OS_TARGET=win32 CPU_TARGET=i386
+  [ $CARCH == "x86_64" ] && make NOGDB=1 all OS_TARGET=win64 CPU_TARGET=x86_64
+}
+
+package() {
+  cd "fpcbuild-$pkgver"
+  
+  #_exes="fpc mkarmins ppudump ppufiles ppumove"
+  
+  if [ $CARCH == "i686" ]; then
+		make -j1 NOGDB=1 PREFIX="${pkgdir}${MINGW_PREFIX}" install OS_TARGET=win32 CPU_TARGET=i386
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/i386-win32/mka64ins.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/i386-win32/ppc386.exe ${pkgdir}${MINGW_PREFIX}/bin
+		for file in "${pkgdir}${MINGW_PREFIX}/bin/i386-win32"; do
+			mv ${file}.exe ${pkgdir}${MINGW_PREFIX}/bin
+		done
+		rm -r ${pkgdir}${MINGW_PREFIX}/bin/i386-win32
+	fi
+  if [ $CARCH == "x86_64" ]; then
+		make -j1 NOGDB=1 PREFIX="${pkgdir}${MINGW_PREFIX}" install OS_TARGET=win64 CPU_TARGET=x86_64
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64/mkx86ins.exe ${pkgdir}${MINGW_PREFIX}/bin
+		#mv ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64/ppcx64.exe ${pkgdir}${MINGW_PREFIX}/bin
+		for file in "${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64"; do
+			mv ${file}.exe ${pkgdir}${MINGW_PREFIX}/bin
+		done
+		rm -r ${pkgdir}${MINGW_PREFIX}/bin/x86_64-win64
+	fi
+	
+	mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver
+	mkdir -p ${pkgdir}${MINGW_PREFIX}/share/${_realname}-$pkgver
+	cp -r ${pkgdir}${MINGW_PREFIX}/doc ${pkgdir}${MINGW_PREFIX}/share/
+	rm -r ${pkgdir}${MINGW_PREFIX}/doc
+	cp -r ${pkgdir}${MINGW_PREFIX}/docs/symbolic ${pkgdir}${MINGW_PREFIX}/share/doc/${_realname}/symbolic
+	rm -r ${pkgdir}${MINGW_PREFIX}/docs
+	cp -r ${pkgdir}${MINGW_PREFIX}/examples ${pkgdir}${MINGW_PREFIX}/share/${_realname}-$pkgver/examples
+	rm -r ${pkgdir}${MINGW_PREFIX}/examples
+	cp -r ${pkgdir}${MINGW_PREFIX}/fpmkinst ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver/fpmkinst
+	rm -r ${pkgdir}${MINGW_PREFIX}/fpmkinst
+	cp -r ${pkgdir}${MINGW_PREFIX}/msg ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver/msg
+	rm -r ${pkgdir}${MINGW_PREFIX}/msg
+	cp -r ${pkgdir}${MINGW_PREFIX}/units ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/$pkgver/units
+	rm -r ${pkgdir}${MINGW_PREFIX}/units
+	
+	install -Dm644 $srcdir/fpc.cfg ${pkgdir}${MINGW_PREFIX}/etc/fpc.cfg
+	install -Dm0644 fpcsrc/rtl/COPYING.FPC "${pkgdir}${MINGW_PREFIX}"/share/licenses/${_realname}/COPYING.FPC
+}
