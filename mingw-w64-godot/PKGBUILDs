@@ -1,4 +1,4 @@
-# Maintainer: Christian Meurin (NebuHiiEjamu)
+# Maintainer (NebuHiiEjamu)
 _realname=godot
 pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
 pkgver=3.0.6
